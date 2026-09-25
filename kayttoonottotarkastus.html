@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Käyttöönottotarkastus – kaukolämpö</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1F4; --card:#FFFFFF; --ink:#15202B; --muted:#5B6773; --line:#D5DBE1;
+  --supply:#C62F28; --supply-soft:#FBE7E5; --return:#1D5FA6; --return-soft:#E3EDF8;
+  --ok:#1C7A4A; --ok-soft:#E1F2E8; --warn:#A35F00; --warn-soft:#FCEFD9; --na:#6B7580; --na-soft:#ECEFF2;
+  --focus:#1D5FA6;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F151B; --card:#18212A; --ink:#E7ECF1; --muted:#9AA6B2; --line:#2C3843;
+    --supply:#F0665E; --supply-soft:#3A1D1C; --return:#6FA6E6; --return-soft:#172A40;
+    --ok:#5CC98E; --ok-soft:#16301F; --warn:#F0AE4C; --warn-soft:#352711; --na:#9AA6B2; --na-soft:#232D37; --focus:#6FA6E6;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F151B; --card:#18212A; --ink:#E7ECF1; --muted:#9AA6B2; --line:#2C3843;
+  --supply:#F0665E; --supply-soft:#3A1D1C; --return:#6FA6E6; --return-soft:#172A40;
+  --ok:#5CC98E; --ok-soft:#16301F; --warn:#F0AE4C; --warn-soft:#352711; --na:#9AA6B2; --na-soft:#232D37; --focus:#6FA6E6;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:calc(env(safe-area-inset-top,0px) + 120px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 17px/1.45 "Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+button,input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.wrap{max-width:640px;margin:0 auto;padding:0 14px 120px}
+
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding:12px 14px 10px;border-bottom:1px solid var(--line)}
+.top-in{max-width:640px;margin:0 auto}
+.site{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.site h1{margin:0;font:600 22px/1.15 "Barlow Condensed",sans-serif;letter-spacing:.2px}
+.site small{color:var(--muted);font-size:14px;white-space:nowrap}
+.meta{color:var(--muted);font-size:14px;margin-top:2px}
+
+.rail{display:flex;gap:4px;margin-top:10px}
+.rail button{flex:1;height:10px;border:0;border-radius:5px;background:var(--line);padding:0;cursor:pointer;position:relative}
+.rail button.ensio{background:color-mix(in srgb,var(--supply) 25%,var(--line))}
+.rail button.toisio{background:color-mix(in srgb,var(--return) 25%,var(--line))}
+.rail button.done.ensio{background:var(--supply)}
+.rail button.done.toisio{background:var(--return)}
+.rail button.done.neutral{background:var(--ink)}
+.rail button.cur{outline:2px solid var(--ink);outline-offset:2px}
+.railtxt{display:flex;justify-content:space-between;font-size:14px;margin-top:8px;color:var(--muted)}
+.railtxt b{color:var(--ink);font-weight:600}
+
+h2.sec{font:600 28px/1.1 "Barlow Condensed",sans-serif;margin:22px 0 4px;display:flex;align-items:center;gap:10px}
+h2.sec .pipe{width:6px;height:26px;border-radius:3px;background:var(--ink)}
+h2.sec .pipe.ensio{background:var(--supply)}
+h2.sec .pipe.toisio{background:var(--return)}
+.lead{color:var(--muted);margin:0 0 14px;font-size:15px}
+.bulk{display:flex;justify-content:flex-end;margin:-4px 0 10px}
+.link{background:none;border:0;color:var(--return);font-weight:500;padding:8px 4px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+
+.item{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
+.item.s-ok{border-color:color-mix(in srgb,var(--ok) 45%,var(--line))}
+.item.s-fail{border-color:var(--warn);box-shadow:inset 4px 0 0 var(--warn)}
+.item.err{border-color:var(--supply);box-shadow:inset 4px 0 0 var(--supply)}
+.q{display:flex;gap:10px;align-items:flex-start;margin-bottom:12px}
+.q .n{font:600 16px/1.4 "Barlow Condensed",sans-serif;color:var(--muted);min-width:22px}
+.q .t{font-weight:500}
+.q .hint{display:block;color:var(--muted);font-size:14px;font-weight:400;margin-top:2px}
+.seg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.seg.two{grid-template-columns:1fr 1fr}
+.seg button{min-height:52px;border:1.5px solid var(--line);background:var(--card);border-radius:10px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.seg button[aria-pressed="true"].ok{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.seg button[aria-pressed="true"].fail{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.seg button[aria-pressed="true"].na{background:var(--na-soft);border-color:var(--na);color:var(--na)}
+.seg svg{width:18px;height:18px}
+.more{margin-top:12px;display:grid;gap:10px}
+label.fl{display:block;font-size:14px;color:var(--muted);margin-bottom:4px}
+input[type=text],input[type=tel],input[type=date],input[type=number],textarea,select{width:100%;min-height:50px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);padding:10px 12px;font-size:17px}
+textarea{min-height:84px;resize:vertical}
+input.err,textarea.err{border-color:var(--supply)}
+.errmsg{color:var(--supply);font-size:14px;margin-top:4px}
+.photo{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.photo label.btn{display:inline-flex;align-items:center;gap:8px;min-height:46px;padding:0 14px;border:1.5px dashed var(--line);border-radius:10px;cursor:pointer;color:var(--muted);font-weight:500}
+.photo input{position:absolute;opacity:0;width:1px;height:1px}
+.photo img{width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field{margin-bottom:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+
+.plate{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:12px;overflow:hidden}
+.plate-h{display:flex;justify-content:space-between;align-items:baseline;padding:12px 14px;border-bottom:1px solid var(--line)}
+.plate-h h3{margin:0;font:600 20px/1.2 "Barlow Condensed",sans-serif}
+.plate-h span{font-size:14px;color:var(--muted)}
+.plate dl{margin:0;padding:6px 14px 2px;display:grid;grid-template-columns:auto 1fr;column-gap:14px}
+.plate dt{color:var(--muted);font-size:14px;padding:6px 0;border-bottom:1px solid var(--line)}
+.plate dd{margin:0;padding:6px 0;text-align:right;font-weight:500;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.plate dl > :nth-last-child(-n+2){border-bottom:0}
+.plate .act{padding:12px 14px 14px;border-top:1px solid var(--line)}
+.plate.s-fail{box-shadow:inset 4px 0 0 var(--warn)}
+.plate.err{box-shadow:inset 4px 0 0 var(--supply);border-color:var(--supply)}
+
+.chk{display:flex;gap:12px;align-items:center;min-height:52px;cursor:pointer}
+.chk input{width:24px;height:24px;accent-color:var(--ok)}
+
+.sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.sum div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}
+.sum b{display:block;font:600 30px/1 "Barlow Condensed",sans-serif}
+.sum span{font-size:13px;color:var(--muted)}
+.sum .o b{color:var(--ok)} .sum .f b{color:var(--warn)} .sum .u b{color:var(--muted)}
+.flist{margin:0 0 14px;padding:0;list-style:none}
+.flist li{background:var(--warn-soft);border-radius:10px;padding:10px 12px;margin-bottom:6px}
+.flist li b{display:block;font-weight:600}
+.flist li span{font-size:15px}
+.flist button{margin-top:4px}
+.outcome{display:grid;gap:8px}
+.outcome button{text-align:left;min-height:60px;padding:10px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);cursor:pointer}
+.outcome button b{display:block;font-weight:600}
+.outcome button span{font-size:14px;color:var(--muted)}
+.outcome button[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--ink)}
+.outcome button[aria-pressed="true"].g{border-color:var(--ok);box-shadow:inset 0 0 0 1.5px var(--ok)}
+.outcome button[aria-pressed="true"].y{border-color:var(--warn);box-shadow:inset 0 0 0 1.5px var(--warn)}
+.outcome button[aria-pressed="true"].r{border-color:var(--supply);box-shadow:inset 0 0 0 1.5px var(--supply)}
+.sig{border:1.5px solid var(--line);border-radius:12px;background:var(--card);overflow:hidden}
+.sig canvas{display:block;width:100%;height:150px;touch-action:none;cursor:crosshair}
+.sig .sigbar{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-top:1px solid var(--line);font-size:14px;color:var(--muted)}
+.sig.err{border-color:var(--supply)}
+
+nav.bottom{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--card);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px))}
+nav.bottom .in{max-width:640px;margin:0 auto;display:grid;grid-template-columns:1fr 2fr;gap:10px}
+.btn-s,.btn-p{min-height:54px;border-radius:12px;font-weight:600;font-size:17px;cursor:pointer}
+.btn-s{background:var(--card);border:1.5px solid var(--line)}
+.btn-p{background:var(--ink);color:var(--card);border:0}
+.btn-s:disabled{opacity:.4}
+.saved{font-size:13px;color:var(--muted);text-align:center;margin-top:18px}
+.done-box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;text-align:center;margin-top:30px}
+.done-box h2{font:600 30px/1.1 "Barlow Condensed",sans-serif;margin:8px 0}
+.done-box .stamp{display:inline-block;padding:6px 14px;border-radius:999px;font-weight:600}
+@media print{nav.bottom,header.top .rail,.bulk,.photo label.btn{display:none}.wrap{padding-bottom:0}}
+@media (prefers-reduced-motion: no-preference){.item,.plate{transition:border-color .2s,box-shadow .2s}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div class="site"><h1 id="hAddr">Katajatie 4</h1><small id="hProj">KL-2026-0142</small></div>
+    <div class="meta" id="hMeta">Kaukolämmön käyttöönottotarkastus</div>
+    <div class="rail" id="rail" role="tablist" aria-label="Tarkastuksen osiot"></div>
+    <div class="railtxt"><span id="railName"></span><span><b id="railCount">0</b> / <span id="railTotal">0</span> kohtaa</span></div>
+  </div>
+</header>
+<main class="wrap" id="main"></main>
+<nav class="bottom"><div class="in">
+  <button class="btn-s" id="prev" type="button">Edellinen</button>
+  <button class="btn-p" id="next" type="button">Seuraava</button>
+</div></nav>
+
+<script>
+const PROJECT = {
+  id:"KL-2026-0142", address:"Katajatie 4", postal:"04130 Sipoo", place:"Käyttöpaikka 20418877",
+  config:"HögforsGST 513-033774 ver. 1", designer:"LVI-insinööritoimisto (esimerkki)",
+  connection:"2 piiriä: käyttövesi + lämmitys, PN16"
+};
+const DEVICES = [
+  {id:"ls1", side:"Käyttövesi", title:"Lämmönsiirrin LS1", rows:[["Valmistaja","HögforsGST / SWEP"],["Malli","B86Hx20 (PS)"],["Teho","60,0 kW"],["Lämpötilat ensiö","70 – 20 °C"],["Lämpötilat toisio","10 – 58 °C"],["Painehäviö ensiö / toisio","18,46 / 24,5 kPa"]], serial:true},
+  {id:"ls2", side:"Lämmitys 1", title:"Lämmönsiirrin LS2", rows:[["Valmistaja","HögforsGST / SWEP"],["Malli","E8ASN-Wx32"],["Teho","12,0 kW"],["Lämpötilat ensiö","90 – 43 °C"],["Lämpötilat toisio","40 – 70 °C"],["Painehäviö ensiö / toisio","0,57 / 0,6 kPa"]], serial:true},
+  {id:"tv1", side:"Käyttövesi", title:"Säätöventtiili TV1", rows:[["Valmistaja","Samson"],["Malli","2432 N 15-2.5"],["DN / kvs","15 / 2,5"]]},
+  {id:"tv2", side:"Lämmitys 1", title:"Säätöventtiili TV2", rows:[["Valmistaja","Belimo"],["Malli","R405DK-0.4"],["DN / kvs","10 / 0,4"]]},
+  {id:"sk", side:"Säätö", title:"Säätökeskus", rows:[["Valmistaja","Ouman"],["Malli","EH-800B"]]},
+  {id:"p2", side:"Lämmitys 1", title:"Kiertovesipumppu P2", rows:[["Valmistaja","Grundfos"],["Malli","UPM3 Auto 15-70-130"]]}
+];
+const SECTIONS = [
+  {id:"info", title:"Perustiedot", side:"neutral", lead:"Tarkista projektilta tulleet tiedot ja täydennä paikalla olijat."},
+  {id:"ensio", title:"Ensiöpuoli", side:"ensio", lead:"Kaukolämpöveden puoli: mittauskeskukselta lämmönsiirtimille.", items:[
+    ["e1","Laitteiden sijoitus suunnitelman mukainen"],
+    ["e2","Lämmönmyyjän laitteiden huoltotila ohjeen mukainen","Mittauskeskuksen edessä 800 mm, sivuilla 600 mm"],
+    ["e3","Kytkentä suunnitelman mukainen"],
+    ["e4","Tarvittavat ilmanpoistot"],
+    ["e5","Tarvittavat tyhjennykset"],
+    ["e6","Tarvittavat paine- ja lämpömittarit"],
+    ["e7","Säätöventtiilit oikein asennettu"],
+    ["e8","Lämpötila-anturit oikein asennettu"],
+    ["e9","Sulkulaitteet, varusteet ja rakenneaineet hyväksyttäviä"],
+    ["e10","Asennustyö hyväksyttävä"],
+    ["e11","Putkiston ja siirtimien huuhtelu suoritettu"]
+  ]},
+  {id:"paine", title:"Tiiviyskoe", side:"ensio", lead:"Kylmällä vedellä ennen ensiöpuolen eristämistä. Koepaine 1,3 × suunnittelupaine, vähintään 15 min."},
+  {id:"lisa", title:"Lisäselvitykset", side:"ensio", lead:"Laitetila, turvallisuus ja käytettävyys.", items:[
+    ["l1","Käyttö- ja huoltotilat riittävät"],
+    ["l2","Lämpöenergiamittarin sähkösyöttö asennettu","Oma ryhmä, 10 A sinetöitävä varoke"],
+    ["l3","DN-koot suunnitelman mukaiset"],
+    ["l4","Vahinkokäyttö estetty"],
+    ["l5","Tulppaukset ilmauksissa ja tyhjennyksissä"],
+    ["l6","Mittareiden luettavuus esteetön"],
+    ["l7","Käsikäytöt kunnossa"],
+    ["l8","Säätölaitteet toimintakunnossa"],
+    ["l9","Liitokset hyväksyttäviä"],
+    ["l10","Tuenta riittävä"],
+    ["l11","Lämpölaajeneminen huomioitu"],
+    ["l12","Vedenpoisto lattiatasolta järjestetty"],
+    ["l13","Lämmönjakohuone lukittava"]
+  ]},
+  {id:"laitteet", title:"Laitteet ja kilpiarvot", side:"ensio", lead:"Arvot tulevat hyväksytystä suunnitelmasta. Vertaa laitteen kilpeen ja kuittaa."},
+  {id:"toisio", title:"Toisiopuoli", side:"toisio", lead:"Rakennuksen lämmitys- ja käyttövesiverkostojen puoli.", items:[
+    ["t1","Kytkentä ja DN-koot suunnitelman mukaiset"],
+    ["t2","Paisunta- ja varolaitteet suunnitelman mukaiset","Esipaine tarkastettu"],
+    ["t3","Tarvittavat ilmanpoistot ja tyhjennykset"],
+    ["t4","Paine- ja lämpömittarit sekä hälytykset"],
+    ["t5","Verkoston täyttö hyväksyttävä"],
+    ["t6","Sulkulaitteet, varusteet ja rakenneaineet hyväksyttäviä"],
+    ["t7","Pumppauslaitteet suunnitelman mukaiset"],
+    ["t8","Säätölaitteet asennettu oikein"],
+    ["t9","Asennus ja tuenta hyväksyttäviä"],
+    ["t10","Lämmitys- ja ilmanvaihtokoneet asennettu ja kytketty oikein"]
+  ]},
+  {id:"yht", title:"Yhteenveto ja kuittaus", side:"neutral", lead:"Tarkista puutteet, valitse lopputulos ja allekirjoita."}
+];
+
+const KEY = "kot-"+PROJECT.id;
+let S = {cur:0, items:{}, dev:{}, info:{date:new Date().toISOString().slice(0,10), contractor:"Putki-Mestari Oy", foreman:"", foremanTel:"", owner:"", inspector:""}, p:{press:"2,1", min:"", ok:null}, outcome:"", supply:"", ce:false, sent:false, sentAt:""};
+const photos = {};
+const sigData = {};
+let showErr = false;
+
+try{ const raw = localStorage.getItem(KEY); if(raw){ S = Object.assign(S, JSON.parse(raw)); } }catch(e){}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} const el=document.getElementById("saved"); if(el) el.textContent="Luonnos tallennettu tälle laitteelle "+new Date().toLocaleTimeString("fi-FI",{hour:"2-digit",minute:"2-digit"}); }
+
+const ICON = {
+  ok:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  fail:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v9"/><circle cx="12" cy="19" r="1.2" fill="currentColor"/></svg>',
+  cam:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>'
+};
+const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function allChecks(){ const a=[]; SECTIONS.forEach(s=>(s.items||[]).forEach(i=>a.push({sec:s,id:i[0],text:i[1]}))); return a; }
+function sectionDone(sec){
+  if(sec.items) return sec.items.every(i=>S.items[i[0]]&&S.items[i[0]].s && (S.items[i[0]].s!=="fail"||(S.items[i[0]].note||"").trim()));
+  if(sec.id==="info") return !!(S.info.foreman.trim()&&S.info.inspector.trim()&&S.info.date);
+  if(sec.id==="paine") return !!(S.p.press&&S.p.min&&Number(String(S.p.min).replace(",","."))>=15&&S.p.ok!==null);
+  if(sec.id==="laitteet") return DEVICES.every(d=>devOk(d)) && S.ce;
+  if(sec.id==="yht") return S.sent;
+  return false;
+}
+function devOk(d){ const v=S.dev[d.id]||{}; if(!v.s) return false; if(v.s==="fail"&&!(v.note||"").trim()) return false; if(d.serial&&!(v.serial||"").trim()) return false; return true; }
+function counts(){
+  let ok=0,fail=0,na=0,open=0;
+  allChecks().forEach(c=>{const v=S.items[c.id]; if(!v||!v.s) open++; else if(v.s==="ok") ok++; else if(v.s==="fail") fail++; else na++;});
+  DEVICES.forEach(d=>{const v=S.dev[d.id]; if(!v||!v.s) open++; else if(v.s==="ok") ok++; else fail++;});
+  if(S.p.ok===null) open++; else if(S.p.ok) ok++; else fail++;
+  return {ok,fail,na,open,total:ok+fail+na+open};
+}
+
+function renderRail(){
+  const r=document.getElementById("rail");
+  r.innerHTML=SECTIONS.map((s,i)=>`<button type="button" role="tab" aria-selected="${i===S.cur}" aria-label="${esc(s.title)}" class="${s.side} ${sectionDone(s)?"done":""} ${i===S.cur?"cur":""}" data-go="${i}"></button>`).join("");
+  document.getElementById("railName").textContent=(S.cur+1)+"/"+SECTIONS.length+"  "+SECTIONS[S.cur].title;
+  const c=counts(); document.getElementById("railCount").textContent=c.total-c.open; document.getElementById("railTotal").textContent=c.total;
+  document.getElementById("hAddr").textContent=PROJECT.address;
+  document.getElementById("hProj").textContent=PROJECT.id;
+  document.getElementById("hMeta").textContent=PROJECT.postal+" · käyttöönottotarkastus";
+}
+
+function segHTML(key, val, withNa=true){
+  const b=(v,cls,label,ic)=>`<button type="button" class="${cls}" aria-pressed="${val===v}" data-set="${key}" data-v="${v}">${ic||""}${label}</button>`;
+  return `<div class="seg ${withNa?"":"two"}" role="group">${b("ok","ok","Kunnossa",ICON.ok)}${b("fail","fail","Puute",ICON.fail)}${withNa?b("na","na","Ei koske"):""}</div>`;
+}
+function photoHTML(key){
+  const list=photos[key]||[];
+  return `<div class="photo"><label class="btn">${ICON.cam}Lisää kuva<input type="file" accept="image/*" capture="environment" data-photo="${key}"></label>${list.map(u=>`<img src="${u}" alt="Kuva puutteesta">`).join("")}</div>`;
+}
+function itemHTML(i, idx){
+  const [id,text,hint]=i; const v=S.items[id]||{};
+  const err = showErr && (!v.s || (v.s==="fail"&&!(v.note||"").trim()));
+  return `<div class="item ${v.s?"s-"+v.s:""} ${err?"err":""}" id="it-${id}">
+    <div class="q"><span class="n">${idx+1}</span><span class="t">${esc(text)}${hint?`<span class="hint">${esc(hint)}</span>`:""}</span></div>
+    ${segHTML("i:"+id, v.s)}
+    ${v.s==="fail"?`<div class="more"><div><label class="fl" for="n-${id}">Kuvaa puute ja korjaustoimenpide</label>
+      <textarea id="n-${id}" data-note="i:${id}" class="${err?"err":""}" placeholder="Esim. ilmanpoiston tulppa puuttuu LS2:n ensiöpuolelta">${esc(v.note)}</textarea>
+      ${err?`<div class="errmsg">Kirjoita puutteen kuvaus ennen jatkamista.</div>`:""}</div>${photoHTML("i:"+id)}</div>`:""}
+    ${err&&!v.s?`<div class="errmsg">Valitse tila tälle kohdalle.</div>`:""}
+  </div>`;
+}
+
+function fieldHTML(id,label,val,type="text",attrs=""){ 
+  const req = /required/.test(attrs); const err = showErr && req && !String(val||"").trim();
+  return `<div class="field"><label class="fl" for="f-${id}">${label}</label><input id="f-${id}" type="${type}" value="${esc(val)}" data-info="${id}" ${attrs.replace("required","")} class="${err?"err":""}">${err?`<div class="errmsg">Pakollinen tieto.</div>`:""}</div>`;
+}
+
+function render(){
+  const sec=SECTIONS[S.cur]; const m=document.getElementById("main");
+  let h=`<h2 class="sec"><span class="pipe ${sec.side}"></span>${esc(sec.title)}</h2><p class="lead">${esc(sec.lead)}</p>`;
+  if(S.sent && sec.id==="yht"){ m.innerHTML=h+doneHTML(); finish(); return; }
+  if(sec.items){
+    const open=sec.items.some(i=>!S.items[i[0]]||!S.items[i[0]].s);
+    if(open) h+=`<div class="bulk"><button type="button" class="link" data-bulk="${sec.id}">Merkitse avoimet kunnossa</button></div>`;
+    h+=sec.items.map(itemHTML).join("");
+  }
+  if(sec.id==="info"){
+    h+=`<div class="card"><dl style="margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:15px">
+      <dt style="color:var(--muted)">Kohde</dt><dd style="margin:0">${esc(PROJECT.address)}, ${esc(PROJECT.postal)}</dd>
+      <dt style="color:var(--muted)">Käyttöpaikka</dt><dd style="margin:0">${esc(PROJECT.place)}</dd>
+      <dt style="color:var(--muted)">Keskus</dt><dd style="margin:0">${esc(PROJECT.config)}</dd>
+      <dt style="color:var(--muted)">Kytkentä</dt><dd style="margin:0">${esc(PROJECT.connection)}</dd></dl></div>`;
+    h+=fieldHTML("date","Tarkastuspäivä",S.info.date,"date","required");
+    h+=fieldHTML("contractor","Lämpöurakoitsija",S.info.contractor);
+    h+=`<div class="grid2">${fieldHTML("foreman","Kaukolämpötyönjohtaja",S.info.foreman,"text",'autocomplete="name" required')}${fieldHTML("foremanTel","Puhelin",S.info.foremanTel,"tel",'inputmode="tel"')}</div>`;
+    h+=fieldHTML("owner","Asiakkaan edustaja (valinnainen)",S.info.owner);
+    h+=fieldHTML("inspector","Kaukolämmön tarkastaja",S.info.inspector,"text","required");
+  }
+  if(sec.id==="paine"){
+    const perr = showErr && !(S.p.min&&Number(String(S.p.min).replace(",","."))>=15);
+    h+=`<div class="card"><div class="grid2">
+      <div class="field"><label class="fl" for="pp">Koepaine (MPa)</label><input id="pp" type="text" inputmode="decimal" value="${esc(S.p.press)}" data-p="press"></div>
+      <div class="field"><label class="fl" for="pm">Kesto (min)</label><input id="pm" type="number" inputmode="numeric" min="0" value="${esc(S.p.min)}" data-p="min" class="${perr?"err":""}">${perr?`<div class="errmsg">Koe kestää vähintään 15 min.</div>`:""}</div>
+    </div><label class="fl">Tulos</label>
+    <div class="seg two" role="group">
+      <button type="button" class="ok" aria-pressed="${S.p.ok===true}" data-pok="1">${ICON.ok}Tiivis</button>
+      <button type="button" class="fail" aria-pressed="${S.p.ok===false}" data-pok="0">${ICON.fail}Vuotoa</button>
+    </div>
+    ${S.p.ok===false?`<div class="more"><textarea data-p="note" placeholder="Vuotokohta ja jatkotoimet">${esc(S.p.note)}</textarea>${photoHTML("p")}</div>`:""}
+    ${showErr&&S.p.ok===null?`<div class="errmsg">Valitse tiiviyskokeen tulos.</div>`:""}</div>`;
+  }
+  if(sec.id==="laitteet"){
+    h+=DEVICES.map(d=>{const v=S.dev[d.id]||{}; const err=showErr&&!devOk(d);
+      return `<div class="plate ${v.s==="fail"?"s-fail":""} ${err?"err":""}" id="dv-${d.id}"><div class="plate-h"><h3>${esc(d.title)}</h3><span>${esc(d.side)}</span></div>
+      <dl>${d.rows.map(r=>`<dt>${esc(r[0])}</dt><dd>${esc(r[1])}</dd>`).join("")}</dl>
+      <div class="act">${d.serial?`<div class="field"><label class="fl" for="sn-${d.id}">Valmistusnumero / vuosi kilvestä</label><input id="sn-${d.id}" type="text" value="${esc(v.serial)}" data-serial="${d.id}" class="${err&&!(v.serial||"").trim()?"err":""}"></div>`:""}
+      <div class="seg two" role="group">
+        <button type="button" class="ok" aria-pressed="${v.s==="ok"}" data-set="d:${d.id}" data-v="ok">${ICON.ok}Vastaa kilpeä</button>
+        <button type="button" class="fail" aria-pressed="${v.s==="fail"}" data-set="d:${d.id}" data-v="fail">${ICON.fail}Poikkeaa</button></div>
+      ${v.s==="fail"?`<div class="more"><textarea data-note="d:${d.id}" placeholder="Kilven arvo ja poikkeaman kuvaus">${esc(v.note)}</textarea>${photoHTML("d:"+d.id)}</div>`:""}
+      ${err?`<div class="errmsg">${!v.s?"Kuittaa vastaavuus.":d.serial&&!(v.serial||"").trim()?"Kirjaa valmistusnumero.":"Kuvaa poikkeama."}</div>`:""}</div></div>`;}).join("");
+    h+=`<div class="card"><label class="chk"><input type="checkbox" data-ce ${S.ce?"checked":""}> Lämmönjakokeskus CE-merkitty ja vaatimustenmukaisuusvakuutus toimitettu</label>${showErr&&!S.ce?`<div class="errmsg">Vahvista CE-merkintä.</div>`:""}</div>`;
+  }
+  if(sec.id==="yht") h+=summaryHTML();
+  h+=`<p class="saved" id="saved"></p>`;
+  m.innerHTML=h;
+  renderRail();
+  const nx=document.getElementById("next"), pv=document.getElementById("prev");
+  pv.disabled=S.cur===0;
+  nx.textContent = sec.id==="yht" ? (S.sent?"Tulosta":"Lähetä tarkastus") : "Seuraava";
+  if(sec.id==="yht"&&!S.sent) initSigs();
+}
+
+function summaryHTML(){
+  const c=counts();
+  const fails=[];
+  allChecks().forEach(x=>{const v=S.items[x.id]; if(v&&v.s==="fail") fails.push({t:x.text,n:v.note,sec:x.sec.id,sid:x.sec.title});});
+  DEVICES.forEach(d=>{const v=S.dev[d.id]; if(v&&v.s==="fail") fails.push({t:d.title+" poikkeaa suunnitelmasta",n:v.note,sec:"laitteet",sid:"Laitteet"});});
+  if(S.p.ok===false) fails.push({t:"Tiiviyskoe: vuotoa",n:S.p.note,sec:"paine",sid:"Tiiviyskoe"});
+  const incomplete=SECTIONS.filter(s=>s.id!=="yht"&&!sectionDone(s));
+  let h=`<div class="sum"><div class="o"><b>${c.ok}</b><span>kunnossa</span></div><div class="f"><b>${c.fail}</b><span>puutetta</span></div><div class="u"><b>${c.open}</b><span>avoinna</span></div></div>`;
+  if(incomplete.length){ h+=`<div class="card" style="border-color:var(--supply)"><b>Keskeneräiset osiot</b>${incomplete.map(s=>`<div><button type="button" class="link" data-go="${SECTIONS.indexOf(s)}">${esc(s.title)}</button></div>`).join("")}</div>`; }
+  h+= fails.length ? `<h3 style="font:600 20px 'Barlow Condensed',sans-serif;margin:16px 0 8px">Puutteet (${fails.length})</h3><ul class="flist">${fails.map(f=>`<li><b>${esc(f.t)}</b><span>${esc(f.n||"")}</span><div><button type="button" class="link" data-go="${SECTIONS.findIndex(s=>s.id===f.sec)}">Avaa ${esc(f.sid.toLowerCase())}</button></div></li>`).join("")}</ul>`
+    : `<p class="lead">Ei kirjattuja puutteita.</p>`;
+  const o=S.outcome, oerr=showErr&&!o;
+  h+=`<h3 style="font:600 20px 'Barlow Condensed',sans-serif;margin:16px 0 8px">Lopputulos</h3><div class="outcome">
+    <button type="button" class="g" aria-pressed="${o==="ok"}" data-out="ok"><b>Hyväksytty</b><span>Lämmöntoimitus voidaan aloittaa.</span></button>
+    <button type="button" class="y" aria-pressed="${o==="cond"}" data-out="cond"><b>Hyväksytty, puutteet korjattava</b><span>Lämmöntoimitus aloitetaan, puutteet tarkastetaan lopputarkastuksessa.</span></button>
+    <button type="button" class="r" aria-pressed="${o==="rej"}" data-out="rej"><b>Ei hyväksytty</b><span>Urakoitsija korjaa ja tilaa uusintatarkastuksen.</span></button></div>
+    ${oerr?`<div class="errmsg">Valitse lopputulos.</div>`:""}`;
+  if(o==="ok"||o==="cond") h+=`<div class="field" style="margin-top:12px"><label class="fl" for="sup">Lämmöntoimitus aloitettu</label><input id="sup" type="date" value="${esc(S.supply)}" data-supply></div>`;
+  h+=`<h3 style="font:600 20px 'Barlow Condensed',sans-serif;margin:18px 0 8px">Allekirjoitukset</h3>
+    ${sigBox("sig1","Kaukolämpötyönjohtaja",S.info.foreman)}
+    <div style="height:10px"></div>
+    ${sigBox("sig2","Kaukolämmön tarkastaja",S.info.inspector)}`;
+  return h;
+}
+function sigBox(id,role,name){ const err=showErr&&!sigData[id]; return `<div class="sig ${err?"err":""}"><canvas id="${id}" aria-label="Allekirjoitus: ${esc(role)}"></canvas><div class="sigbar"><span>${esc(role)}${name?": "+esc(name):""}</span><button type="button" class="link" data-clear="${id}">Tyhjennä</button></div></div>${err?`<div class="errmsg">Allekirjoitus puuttuu.</div>`:""}`; }
+
+function initSigs(){
+  ["sig1","sig2"].forEach(id=>{
+    const c=document.getElementById(id); if(!c) return;
+    const r=c.getBoundingClientRect(), dpr=window.devicePixelRatio||1;
+    c.width=r.width*dpr; c.height=r.height*dpr;
+    const x=c.getContext("2d"); x.scale(dpr,dpr); x.lineWidth=2.4; x.lineCap="round"; x.lineJoin="round";
+    x.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue("--ink").trim()||"#15202B";
+    if(sigData[id]){ const im=new Image(); im.onload=()=>x.drawImage(im,0,0,r.width,r.height); im.src=sigData[id]; }
+    let d=false;
+    const pos=e=>{const b=c.getBoundingClientRect();return [e.clientX-b.left,e.clientY-b.top];};
+    c.addEventListener("pointerdown",e=>{d=true;c.setPointerCapture(e.pointerId);const [a,b]=pos(e);x.beginPath();x.moveTo(a,b);});
+    c.addEventListener("pointermove",e=>{if(!d)return;const [a,b]=pos(e);x.lineTo(a,b);x.stroke();});
+    const end=()=>{if(!d)return;d=false;sigData[id]=c.toDataURL();};
+    c.addEventListener("pointerup",end); c.addEventListener("pointercancel",end);
+  });
+}
+
+function doneHTML(){
+  const lab={ok:["Hyväksytty","var(--ok-soft)","var(--ok)"],cond:["Hyväksytty, puutteet korjattava","var(--warn-soft)","var(--warn)"],rej:["Ei hyväksytty","var(--supply-soft)","var(--supply)"]}[S.outcome];
+  const c=counts();
+  return `<div class="done-box"><span class="stamp" style="background:${lab[1]};color:${lab[2]}">${lab[0]}</span>
+    <h2>Tarkastus lähetetty</h2><p class="lead">${esc(PROJECT.address)} · ${esc(S.sentAt)}<br>${c.ok} kunnossa, ${c.fail} puutetta. Pöytäkirja liitetään projektiin ${esc(PROJECT.id)} ja lähetetään urakoitsijalle ja asiakkaalle.</p>
+    <button type="button" class="link" data-reopen>Avaa tarkastus uudelleen muokattavaksi</button></div>`;
+}
+function finish(){ renderRail(); document.getElementById("next").textContent="Tulosta"; document.getElementById("prev").disabled=false; }
+
+function validateAll(){
+  const bad=SECTIONS.findIndex(s=>s.id!=="yht"&&!sectionDone(s));
+  if(bad>=0) return bad;
+  if(!S.outcome||!sigData.sig1||!sigData.sig2) return SECTIONS.length-1;
+  return -1;
+}
+function go(i){ S.cur=Math.max(0,Math.min(SECTIONS.length-1,i)); showErr=false; save(); render(); window.scrollTo({top:0}); }
+
+document.addEventListener("click",e=>{
+  const t=e.target.closest("button,[data-go]"); if(!t) return;
+  if(t.dataset.go!==undefined){ go(+t.dataset.go); return; }
+  if(t.dataset.set){ const [k,id]=t.dataset.set.split(":"); const tgt=k==="i"?S.items:S.dev; tgt[id]=Object.assign(tgt[id]||{}, {s:t.dataset.v}); save(); render(); if(t.dataset.v==="fail"){ const ta=document.querySelector(`[data-note="${k}:${id}"]`); if(ta) ta.focus(); } return; }
+  if(t.dataset.pok!==undefined){ S.p.ok=t.dataset.pok==="1"; save(); render(); return; }
+  if(t.dataset.bulk){ const s=SECTIONS.find(x=>x.id===t.dataset.bulk); s.items.forEach(i=>{ if(!S.items[i[0]]||!S.items[i[0]].s) S.items[i[0]]={s:"ok"}; }); save(); render(); return; }
+  if(t.dataset.out){ S.outcome=t.dataset.out; if((S.outcome==="ok"||S.outcome==="cond")&&!S.supply) S.supply=S.info.date; save(); render(); return; }
+  if(t.dataset.clear){ delete sigData[t.dataset.clear]; render(); return; }
+  if(t.dataset.reopen!==undefined){ S.sent=false; save(); render(); return; }
+  if(t.id==="prev"){ go(S.cur-1); return; }
+  if(t.id==="next"){
+    const sec=SECTIONS[S.cur];
+    if(sec.id==="yht"){
+      if(S.sent){ window.print(); return; }
+      const bad=validateAll();
+      if(bad>=0){ showErr=true; if(bad!==S.cur){ S.cur=bad; } render(); const first=document.querySelector(".err"); if(first) first.scrollIntoView({block:"center"}); return; }
+      S.sent=true; S.sentAt=new Date().toLocaleString("fi-FI",{dateStyle:"short",timeStyle:"short"}); save(); render(); window.scrollTo({top:0}); return;
+    }
+    if(!sectionDone(sec)){ showErr=true; render(); const first=document.querySelector(".err"); if(first) first.scrollIntoView({block:"center",behavior:"smooth"}); return; }
+    go(S.cur+1);
+  }
+});
+document.addEventListener("input",e=>{
+  const t=e.target;
+  if(t.dataset.note){ const [k,id]=t.dataset.note.split(":"); const tgt=k==="i"?S.items:S.dev; tgt[id]=Object.assign(tgt[id]||{}, {note:t.value}); t.classList.remove("err"); save(); renderRail(); }
+  else if(t.dataset.info){ S.info[t.dataset.info]=t.value; t.classList.remove("err"); save(); renderRail(); }
+  else if(t.dataset.p){ S.p[t.dataset.p]=t.value; t.classList.remove("err"); save(); renderRail(); }
+  else if(t.dataset.serial){ S.dev[t.dataset.serial]=Object.assign(S.dev[t.dataset.serial]||{}, {serial:t.value}); t.classList.remove("err"); save(); renderRail(); }
+  else if(t.dataset.supply!==undefined){ S.supply=t.value; save(); }
+});
+document.addEventListener("change",e=>{
+  const t=e.target;
+  if(t.dataset.ce!==undefined){ S.ce=t.checked; save(); renderRail(); }
+  if(t.dataset.photo&&t.files&&t.files[0]){ const k=t.dataset.photo; const r=new FileReader(); r.onload=()=>{ (photos[k]=photos[k]||[]).push(r.result); render(); }; r.readAsDataURL(t.files[0]); }
+});
+render();
+</script>
+</body>
+</html>
